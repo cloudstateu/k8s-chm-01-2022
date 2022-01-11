@@ -3,76 +3,43 @@
 <br><br>
 <br><br>
 
-# Praca domowa 1
+# Spotkania "K8s dla każdego... chmuromaniaka"
 
-## Wstęp
+## Tworzenie klastra w GCP
 
-Witaj w pierwszej pracy domowej w której uruchomisz aplikację składającą się z dwóch skonteneryzowanyhc usług (React oraz Node.js) na klastrze Kubernetes.
+1. W Cloud Shell wykonaj poniższe polecenie. Tworzenie klastra w GCP zajmuje około 8 minut.
 
-Na początek kilka informacji organizacyjnych:
+ ```bash
+    export PROJECT_ID=`gcloud config get-value project` && \
+    export M_TYPE=n1-standard-1 && \
+    export ZONE=europe-west3-a && \
+    export CLUSTER_NAME=${PROJECT_ID}-${RANDOM} && \
+    export WORKLOAD=${PROJECT_ID}.svc.id.goog
+    gcloud services enable container.googleapis.com && \
+    gcloud container clusters create $CLUSTER_NAME \
+    --zone $ZONE \
+    --node-locations $ZONE \
+    --cluster-version latest \
+    --machine-type=$M_TYPE \
+    --num-nodes 1 \
+    --project $PROJECT_ID \
+    --workload-pool=$WORKLOAD
+  ```
 
-1. Pierwszym krokiem pracy domowej jest zainstalowanie Docker. Zaprezentowaliśmy dwa scenariusze instalacji: na maszynie wirtualnej w Azure (tak jak na szkoleniu) lub na własnym sprzęcie. Ćwiczenia napisane są z punktu widzenia maszyny wirtualnej w Azure. Możesz wybrać opcję, która jest dla Ciebie wygodniejsza. 
-1. Zadania z gwiazdką (`*`) są opcjonalne do wykonania. Zachęcamy do ich wykonania, ale nie są one niezbędne do ukończenia pracy domowej.
+1. Sprawdź czy maszyny klastra są w statusie `Ready`
 
-W razie jakichkolwiek pytań lub wątpliwości wyślij wiadomość na [maciej.borowy@chmurowisko.pl](mailto:maciej.borowy@chumrowisko.pl) lub [daniel.pisarek@chmurowisko.pl](mailto:daniel.pisarek@chumrowisko.pl).
+  ```bash
+  kubectl get nodes
+  ```
+ 
+  Spodziewany output:
+ 
+  ```bash
+  NAME                                                  STATUS   ROLES    AGE   VERSION
+  gke-training-w2-chmstude-default-pool-8e117e69-j0r7   Ready    <none>   2m    v1.21.6-gke.1500
+  ```
 
 ---
-
-## Utwórz maszynę laboratoryjną z Ubuntu w Azure (*)
-
-⚠️ **Uwaga**: nie musisz wykonywać tego kroku jeśli instalujesz Docker na własnym sprzęcie.
-
-### Po co? 
-
-Domyślnie w [Azure Cloud Shell](https://docs.microsoft.com/en-us/azure/cloud-shell/overview) nie możemy korzystać ze wszystkich funkcji Docker. Rozwiązaniem tego problemu jest stworzenie dedykowanej maszyny wirtualnej z Ubuntu na której zainstalujemy Docker Engine i wykorzystamy pełen potencjał kontenerów.
-
-### Kroki
- 
-1. Uruchom [Azure Cloud Shell](https://shell.azure.com)
-1. Wywołaj poniższy snippet w Azure Cloud Shell. Zmień wartość zmiennej `RESOURCE_GROUP_NAME` na nazwę Resource Group do której masz dostęp i możesz tworzyć zasoby. W snippet użyjesz komendy [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli) `az vm create`, która stworzy maszynę wirtualną (2 CPU, 7 GiB RAM, Ubuntu). Do maszyny możesz zalogować się korzystając z loginu i hasła podanych w zmiennych `ADMIN_USERNAME` oraz `ADMIN_PASSWORD`.
-
-    ```shell
-    RESOURCE_GROUP_NAME="<resource_group_name>"
-    VM_NAME="labvm"
-    ADMIN_USERNAME="ubuntu"
-    ADMIN_PASSWORD='Chmurowisko123!@#'
-
-    az vm create -n $VM_NAME -g $RESOURCE_GROUP_NAME \
-        --image "UbuntuLTS" \
-        --authentication-type password \
-        --admin-username $ADMIN_USERNAME \
-        --admin-password $ADMIN_PASSWORD \
-        --public-ip-sku Standard \
-        --size Standard_DS2_v2
-    ```
-
-1. Po utworzeniu maszyny wirtualnej zmień ustawienia Network Security Group (NSG) i zezwól na ruch przychodzący na portach 80 oraz 8000-9000. Dzięki dodaniu tej reguły będziesz mógł wyświetlić aplikacje uruchomione za pomocą Docker w Twojej przeglądarce.
-
-    ```shell
-    NSG_NAME="${VM_NAME}NSG"
-
-    az network nsg rule create \
-        --name Custom_8000_9000 \
-        --nsg-name $NSG_NAME \
-        --resource-group $RESOURCE_GROUP_NAME \
-        --destination-port-ranges 80 8000-9000 \
-        --protocol Tcp \
-        --priority 1100
-    ```
-
-1. Znajdź publiczny adres IP maszyny i połącz się z maszyną wirtualną za pomocą SSH.
-
-    Publiczny adres IP maszyny znajdziesz w Azure Portal lub możesz skorzystać ze skryptu listującego maszyny wirtualne i ich adresy IP:
-    
-    ```shell
-    az vm list-ip-addresses --query "[].{name:virtualMachine.name, publicIp: virtualMachine.network.publicIpAddresses[0].ipAddress}"
-    ```
-
-1. Połącz się z maszyną wirtualną za pomocą SSH. Pamiętaj, aby uzupełnić ją publicznym adresem IP Twojej VM.
-
-    ```shell
-    ssh ubuntu@<VM-PUBLIC-IP>
-    ```
 
 ## Zainstaluj Docker na swojej maszynie lub maszynie laboratoryjnej (*)
 
